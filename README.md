@@ -23,7 +23,7 @@ Clone The Repo
 
 You can get hold of the scripts by executing the following command on your host PC.
 
-git clone https://bespoketechltd@bitbucket.org/bespoketechltd/rpi-os-builder.git
+git clone https://bitbucket.org/bespoketechltd/rpi-os-builder.git
 
 Host Requirements
 *****************
