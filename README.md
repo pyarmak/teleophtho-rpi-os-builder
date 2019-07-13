@@ -4,6 +4,15 @@ You can change settings such as the OS variant you want to build within the buil
 
 To modify what packages are installed edit the chroot-script.sh file.
 
+By default the script will build a Buster image with SSH root access enabled.
+
+Default Credentials:
+
+Username: root
+Password: raspberry
+
+(Please set your own password within the build_sysroot.sh script)
+
 Features
 ********
 
@@ -14,6 +23,7 @@ Clone The Repo
 
 You can get hold of the scripts by executing the following command on your host PC.
 
+git clone https://bespoketechltd@bitbucket.org/bespoketechltd/rpi-os-builder.git
 
 Host Requirements
 *****************
