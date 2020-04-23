@@ -148,6 +148,9 @@ touch /boot/ssh
 echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
 
 #setup gstreamer
+# upgrade to latest Debian package versions
+apt-get update
+apt-get upgrade -y
 # Get the required libraries
 # libdirac-dev is not availble
 apt-get install -y build-essential autotools-dev automake autoconf \
@@ -184,17 +187,22 @@ export LDFLAGS='-L/opt/vc/lib'
 
 git clone git://anongit.freedesktop.org/gstreamer/gst-build /opt/gst-build && cd /opt/gst-build
 
-meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled
+meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled -Ddoc=disabled -Dgtk_doc=disabled
 
 ninja -C build
 
+ninja -C build/ install
+
+ln -s /usr/local/include/gstreamer-1.0 /usr/include
+echo "include /usr/local/lib" >> /etc/ld.so.conf
+ldconfig
 
 #build qt
 mkdir /opt/qt-build && cd /opt/qt-build && wget http://download.qt.io/official_releases/qt/5.12/5.12.7/single/qt-everywhere-src-5.12.7.tar.xz
 tar xf qt-everywhere-src-5.12.7.tar.xz
 
 git clone https://github.com/oniongarlic/qt-raspberrypi-configuration.git
-cd qt-raspberrypi-configuration && make install DESTDIR=../qt-everywhere-src-5.12.7 && cd ..
+cd qt-raspberrypi-configuration && make install DESTDIR=../qt-everywhere-src-5.12.7 && cd ../
 
 apt-get install build-essential libfontconfig1-dev libdbus-1-dev libfreetype6-dev libicu-dev libinput-dev libxkbcommon-dev libsqlite3-dev libssl-dev libpng-dev libjpeg-dev libglib2.0-dev libraspberrypi-dev
 
@@ -212,11 +220,11 @@ PKG_CONFIG_LIBDIR=/opt/vc/lib/pkgconfig:/usr/lib/arm-linux-gnueabihf/pkgconfig:/
 -skip qtwayland \
 -skip qtwebengine \
 -skip qtlocation \
--no-feature-geoservices_mapboxgl \
 -qt-pcre \
 -no-pch \
 -ssl \
 -evdev \
+-gstreamer \
 -system-freetype \
 -fontconfig \
 -glib \
