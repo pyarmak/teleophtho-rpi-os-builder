@@ -2,9 +2,9 @@
 ############################################################################################################
 # common settings
 ROOT_PASSWORD="raspberry"
-OS_NAME="MyPiOS"
+OS_NAME="teleophtho-os"
 OS_VERSION="v1"
-RPI_HOSTNAME="MyPiOS-hostname"
+RPI_HOSTNAME="teleophtho-streamer"
 RPI_OS_VERSION="v1"
 OS_VARIANT="buster"
 ############################################################################################################

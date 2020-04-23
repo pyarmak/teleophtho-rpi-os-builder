@@ -147,3 +147,82 @@ fi
 touch /boot/ssh
 echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
 
+#setup gstreamer
+# Get the required libraries
+# libdirac-dev is not availble
+apt-get install -y build-essential autotools-dev automake autoconf \
+                    libtool autopoint libxml2-dev zlib1g-dev libglib2.0-dev \
+                    pkg-config bison flex python3 git gtk-doc-tools libasound2-dev \
+                    libgudev-1.0-dev libxt-dev libvorbis-dev libcdparanoia-dev \
+                    libpango1.0-dev libtheora-dev libvisual-0.4-dev iso-codes \
+                    libgtk-3-dev libraw1394-dev libiec61883-dev libavc1394-dev \
+                    libv4l-dev libcairo2-dev libcaca-dev libspeex-dev libpng-dev \
+                    libshout3-dev libjpeg-dev libaa1-dev libflac-dev libdv4-dev \
+                    libtag1-dev libwavpack-dev libpulse-dev libsoup2.4-dev libbz2-dev \
+                    libcdaudio-dev libdc1394-22-dev ladspa-sdk libass-dev \
+                    libcurl4-gnutls-dev libdca-dev libdvdnav-dev \
+                    libexempi-dev libexif-dev libfaad-dev libgme-dev libgsm1-dev \
+                    libiptcdata0-dev libkate-dev libmimic-dev libmms-dev \
+                    libmodplug-dev libmpcdec-dev libofa0-dev libopus-dev \
+                    librsvg2-dev librtmp-dev libschroedinger-dev libslv2-dev \
+                    libsndfile1-dev libsoundtouch-dev libspandsp-dev libx11-dev \
+                    libxvidcore-dev libzbar-dev libzvbi-dev liba52-0.7.4-dev \
+                    libcdio-dev libdvdread-dev libmad0-dev libmp3lame-dev \
+                    libmpeg2-4-dev libopencore-amrnb-dev libopencore-amrwb-dev \
+                    libsidplay1-dev libtwolame-dev libx264-dev libusb-1.0 \
+                    python-gi-dev yasm python3-dev libgirepository1.0-dev \
+                    libsrtp-dev liborc-dev python3-pip ninja-build
+                    
+pip3 install meson
+
+ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
+ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
+
+export PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/
+export CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/'
+export LDFLAGS='-L/opt/vc/lib'
+
+git clone git://anongit.freedesktop.org/gstreamer/gst-build /opt/gst-build && cd /opt/gst-build
+
+meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled
+
+ninja -C build
+
+
+#build qt
+mkdir /opt/qt-build && cd /opt/qt-build && wget http://download.qt.io/official_releases/qt/5.12/5.12.7/single/qt-everywhere-src-5.12.7.tar.xz
+tar xf qt-everywhere-src-5.12.7.tar.xz
+
+git clone https://github.com/oniongarlic/qt-raspberrypi-configuration.git
+cd qt-raspberrypi-configuration && make install DESTDIR=../qt-everywhere-src-5.12.7 && cd ..
+
+apt-get install build-essential libfontconfig1-dev libdbus-1-dev libfreetype6-dev libicu-dev libinput-dev libxkbcommon-dev libsqlite3-dev libssl-dev libpng-dev libjpeg-dev libglib2.0-dev libraspberrypi-dev
+
+mkdir build && cd build
+
+PKG_CONFIG_LIBDIR=/opt/vc/lib/pkgconfig:/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig \
+../qt-everywhere-src-5.12.7/configure -platform linux-rpi3-g++ \
+-v \
+-opengl es2 -eglfs \
+-no-gtk \
+-opensource -confirm-license -release \
+-reduce-exports \
+-force-pkg-config \
+-nomake examples -no-compile-examples \
+-skip qtwayland \
+-skip qtwebengine \
+-skip qtlocation \
+-no-feature-geoservices_mapboxgl \
+-qt-pcre \
+-no-pch \
+-ssl \
+-evdev \
+-system-freetype \
+-fontconfig \
+-glib \
+-prefix /opt/Qt5.12 \
+-qpa eglfs
+
+make -j 8
+
+make install
