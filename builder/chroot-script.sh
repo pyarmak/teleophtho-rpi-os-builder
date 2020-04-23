@@ -176,26 +176,98 @@ apt-get install -y build-essential autotools-dev automake autoconf \
                     python-gi-dev yasm python3-dev libgirepository1.0-dev \
                     libsrtp-dev liborc-dev python3-pip ninja-build
                     
-pip3 install meson
+# ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
+# ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
 
-ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
-ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
+mkdir -p /opt/gst-build && cd /opt/gst-build
 
-export PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/
+#get repos if they are not there yet
+[ ! -d gstreamer ] && git clone git://anongit.freedesktop.org/git/gstreamer/gstreamer
+[ ! -d gst-plugins-base ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-plugins-base
+[ ! -d gst-plugins-good ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-plugins-good
+[ ! -d gst-plugins-bad ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-plugins-bad
+[ ! -d gst-libav ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-libav
+[ ! -d gst-plugins-ugly ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-plugins-ugly
+[ ! -d gst-omx ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-omx
+[ ! -d libnice ] && git clone https://gitlab.freedesktop.org/libnice/libnice
+
+export LD_LIBRARY_PATH=/usr/local/lib/
+
+#libnice for webrtc
+cd libnice
+./autogen.sh
+./configure --enable-compile-warnings=no
+make -j4 
+sudo make install
+cd ..
+
+cd gstreamer
+git checkout $BRANCH
+./autogen.sh --disable-gtk-doc
+make -j4
+sudo make install
+cd ..
+
+cd gst-plugins-base
+git checkout $BRANCH
+./autogen.sh --disable-gtk-doc --disable-examples
+make -j4
+sudo make install
+cd ..
+
+cd gst-libav
+git checkout $BRANCH
+./autogen.sh --disable-gtk-doc --enable-orc
+make -j4
+sudo make install
+cd ..
+
+cd gst-plugins-good
+git checkout $BRANCH
+./autogen.sh --disable-gtk-doc
+make -j4
+sudo make install
+cd ..
+
+cd gst-plugins-ugly
+git checkout $BRANCH
+./autogen.sh --disable-gtk-doc
+make -j4
+sudo make install
+cd ..
+
+cd gst-plugins-bad
+git checkout $BRANCH
+./autogen.sh --disable-gtk-doc
 export CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/'
 export LDFLAGS='-L/opt/vc/lib'
+./configure CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/' LDFLAGS='-L/opt/vc/lib' \
+--disable-gtk-doc --disable-opengl --enable-gles2 --enable-egl --disable-glx \
+--disable-x11 --disable-wayland --enable-dispmanx \
+--with-gles2-module-name=/opt/vc/lib/libGLESv2.so \
+--with-egl-module-name=/opt/vc/lib/libEGL.so
+make CFLAGS+='-Wno-error -Wno-redundant-decls' LDFLAGS+='-L/opt/vc/lib' -j4
+sudo make install
+cd ..
 
-git clone git://anongit.freedesktop.org/gstreamer/gst-build /opt/gst-build && cd /opt/gst-build
+# omx support
+cd gst-omx
+git checkout $BRANCH
+export LDFLAGS='-L/opt/vc/lib' \
+CFLAGS='-I/opt/vc/include -I/opt/vc/include/IL -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/IL' \
+CPPFLAGS='-I/opt/vc/include -I/opt/vc/include/IL -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/IL'\
+PKG_CONFIG_PATH='/opt/vc/lib/pkgconfig'
+./autogen.sh --disable-gtk-doc --with-omx-target=rpi
+make CFLAGS+='-Wno-error -Wno-redundant-decls' LDFLAGS+='-L/opt/vc/lib' -j4
+sudo make install
+cd ..
 
-meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled -Ddoc=disabled -Dgtk_doc=disabled
+#finish up
+sudo ln -s /usr/local/include/gstreamer-1.0 /usr/include
+sudo ldconfig
 
-ninja -C build
-
-ninja -C build/ install
-
-ln -s /usr/local/include/gstreamer-1.0 /usr/include
-echo "include /usr/local/lib" >> /etc/ld.so.conf
-ldconfig
+#print version
+gst-inspect-1.0 --gst-version
 
 #build qt
 mkdir /opt/qt-build && cd /opt/qt-build && wget http://download.qt.io/official_releases/qt/5.12/5.12.7/single/qt-everywhere-src-5.12.7.tar.xz
