@@ -174,20 +174,20 @@ apt-get install -y build-essential autotools-dev automake autoconf \
                     libmpeg2-4-dev libopencore-amrnb-dev libopencore-amrwb-dev \
                     libsidplay1-dev libtwolame-dev libx264-dev libusb-1.0 \
                     python-gi-dev yasm python3-dev libgirepository1.0-dev \
-                    libsrtp-dev liborc-dev python3-pip ninja-build
+                    libsrtp-dev liborc-dev python3-pip ninja-build libraspberrypi-dev
                     
 pip3 install meson
 
-ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
-ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
+# ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
+# ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
 
-export PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/
-export CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/'
-export LDFLAGS='-L/opt/vc/lib'
+# export PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/
+# export CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/'
+# export LDFLAGS='-L/opt/vc/lib'
 
 git clone git://anongit.freedesktop.org/gstreamer/gst-build /opt/gst-build && cd /opt/gst-build
 
-meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled -Ddoc=disabled -Dgtk_doc=disabled
+LDFLAGS='-L/opt/vc/lib' CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/' PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/ meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libbrcmGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libbrcmEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled -Ddoc=disabled -Dgtk_doc=disabled
 
 ninja -C build
 
