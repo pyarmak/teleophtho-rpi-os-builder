@@ -143,6 +143,9 @@ echo 'deb http://archive.raspberrypi.org/debian/ buster main ui' > /etc/apt/sour
 echo 'deb-src http://archive.raspberrypi.org/debian/ buster main ui' >> /etc/apt/sources.list.d/raspi.list
 fi
 
+# Enable deb sources
+sed -i -- 's/#deb-src/deb-src/g' /etc/apt/sources.list && sed -i -- 's/# deb-src/deb-src/g' /etc/apt/sources.list
+
 #switch on ssh
 touch /boot/ssh
 echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
@@ -151,6 +154,9 @@ echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
 # upgrade to latest Debian package versions
 apt-get update
 apt-get upgrade -y
+# install qt build-deps
+apt-get -y build-dep qt4-x11
+apt-get -y build-dep libqt5gui5
 # Get the required libraries
 # libdirac-dev is not availble
 apt-get install -y build-essential autotools-dev automake autoconf \
@@ -174,20 +180,43 @@ apt-get install -y build-essential autotools-dev automake autoconf \
                     libmpeg2-4-dev libopencore-amrnb-dev libopencore-amrwb-dev \
                     libsidplay1-dev libtwolame-dev libx264-dev libusb-1.0 \
                     python-gi-dev yasm python3-dev libgirepository1.0-dev \
-                    libsrtp-dev liborc-dev python3-pip ninja-build libraspberrypi-dev
+                    libsrtp-dev liborc-dev python3-pip ninja-build libraspberrypi-dev \
+		    libudev-dev libinput-dev libts-dev libxcb-xinerama0-dev libxcb-xinerama0 wget git
                     
 pip3 install meson
 
-ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
-ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
+#ln -s /opt/vc/lib/libbrcmEGL.so /opt/vc/lib/libEGL.so
+#ln -s /opt/vc/lib/libbrcmGLESv2.so /opt/vc/lib/libGLESv2.so
 
 # export PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/
 # export CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/'
 # export LDFLAGS='-L/opt/vc/lib'
 
+
+#build qt
+mkdir /opt/qt-build && cd /opt/qt-build && wget http://download.qt.io/official_releases/qt/5.13/5.13.2/single/qt-everywhere-src-5.13.2.tar.xz
+tar xf qt-everywhere-src-5.13.2.tar.xz
+
+git clone https://github.com/pyarmak/qt-raspberrypi-configuration.git
+cd qt-raspberrypi-configuration && make configure-armv8-vc4 DESTDIR=../qt-everywhere-src-5.13.2 && cd ../build-qt-armv8-vc4
+
+#apt-get install build-essential libfontconfig1-dev libdbus-1-dev libfreetype6-dev libicu-dev libinput-dev libxkbcommon-dev libsqlite3-dev libssl-dev libpng-dev libjpeg-dev libglib2.0-dev libraspberrypi-dev
+
+make -j 4
+
+make install
+
+cd / && rm -rf /opt/qt-build
+
+echo 'export LD_LIBRARY_PATH=/opt/Qt5.13/lib' >> /home/pi/.bashrc
+echo 'export PATH=/opt/Qt5.13/bin:$PATH' >> /home/pi/.bashrc
+
+export LD_LIBRARY_PATH=/opt/Qt5.13/lib
+export PATH=/opt/Qt5.13/bin:$PATH
+
 git clone git://anongit.freedesktop.org/gstreamer/gst-build /opt/gst-build && cd /opt/gst-build
 
-LDFLAGS='-L/opt/vc/lib' CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/' PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/ meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=dispmanx -D gst-plugins-base:gles2_module_name=/opt/vc/lib/libGLESv2.so -D gst-plugins-base:egl_module_name=/opt/vc/lib/libEGL.so -D omx=enabled -D gst-omx:header_path=/opt/vc/include/IL/ -D gst-omx:target=rpi -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled -Ddoc=disabled -Dgtk_doc=disabled
+LDFLAGS='-L/opt/vc/lib' CFLAGS='-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux/' PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig/ meson build/ -D gst-plugins-base:gl_api=gles2 -D gst-plugins-base:gl_platform=egl -D gst-plugins-base:gl_winsys=gbm -D python=disabled -D introspection=disabled -D gst-plugins-bad:bluez=disabled -D gst-plugins-bad:opencv=disabled -D bad=enabled -Ddoc=disabled -Dgtk_doc=disabled -D gst-plugins-good:qt5=enabled
 
 ninja -C build
 
@@ -197,15 +226,4 @@ ln -s /usr/local/include/gstreamer-1.0 /usr/include
 echo "include /usr/local/lib" >> /etc/ld.so.conf
 ldconfig
 
-#build qt
-mkdir /opt/qt-build && cd /opt/qt-build && wget http://download.qt.io/official_releases/qt/5.12/5.12.7/single/qt-everywhere-src-5.12.7.tar.xz
-tar xf qt-everywhere-src-5.12.7.tar.xz
-
-git clone https://github.com/pyarmak/qt-raspberrypi-configuration.git
-cd qt-raspberrypi-configuration && make configure-armv8 DESTDIR=../qt-everywhere-src-5.12.7 && cd ../build-qt-armv8
-
-apt-get install build-essential libfontconfig1-dev libdbus-1-dev libfreetype6-dev libicu-dev libinput-dev libxkbcommon-dev libsqlite3-dev libssl-dev libpng-dev libjpeg-dev libglib2.0-dev libraspberrypi-dev
-
-make -j 10
-
-make install
+cd / && rm -rf /opt/gst-build
